@@ -9,6 +9,11 @@ fn main() {
             return
         }
     };
+    println!("ref@ ----> {}", head_ref);
 
-    println!("@ ----> {}", head_ref);
+    let head_split: Vec<_> = head_ref.split("").collect();
+    println!("head@ ----> {:?}", head_split);
+    let folder_split: &String = &head_split[1..3].join("");
+    let file_split: &String = &head_split[3 .. head_split.len() - 2].join("");
+    println!("folder: {:?}, file: {:?}", folder_split, file_split);
 }
