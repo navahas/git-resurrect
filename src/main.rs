@@ -1,10 +1,14 @@
-use std::{fs, io};
+use std::fs;
+static HEAD: &str = "./.git/refs/heads/master";
 
-fn main() -> io::Result<()> {
-    let git_dir = fs::read_dir("./.git")?
-        .map(|res| res.map(|e| e.path()))
-        .collect::<Result<Vec<_>, io::Error>>()?;
-    println!("@ ----> {:?}", git_dir);
-    Ok(())
+fn main() {
+    let head_ref = match fs::read_to_string(HEAD) {
+        Ok(sha) => sha,
+        Err(_) => {
+            eprintln!("Error: Could not read HEAD ref");
+            return
+        }
+    };
+
+    println!("@ ----> {}", head_ref);
 }
-
