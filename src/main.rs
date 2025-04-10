@@ -6,6 +6,7 @@ fn main() -> io::Result<()> {
         .collect::<Result<Vec<_>, io::Error>>()?;
 
     println!("@ ----> {:?}", git_dir);
+
     Ok(())
 }
 
