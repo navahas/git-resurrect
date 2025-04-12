@@ -1,7 +1,7 @@
 use std::fs;
 use std::process::{Command, Output};
 
-static HEAD: &str = "./.git/refs/heads/main";
+static HEAD: &str = "./.git/HEAD";
 
 #[derive(Debug, PartialEq)]
 enum GtoType {
@@ -38,7 +38,7 @@ fn git_cat_file(sha: &str) -> Output {
 
 fn main() {
     let head_ref = match fs::read_to_string(HEAD) {
-        Ok(sha) => sha.trim().to_string(),
+        Ok(sha) => sha.split_whitespace().nth(1).expect("").to_string(),
         Err(_) => {
             eprintln!("Error: Could not read HEAD ref");
             return
@@ -70,9 +70,14 @@ fn main() {
         let sha = gto_line[2].parse::<String>().unwrap();
         let file_name = gto_line[3].parse::<String>().unwrap();
 
+        let gto_type = match GtoType::from_str(gto_type_str) {
+            Some(t) => t,
+            None => continue
+        };
+
         let gto_struct = GitTreeObject {
             mode,
-            gto_type: GtoType::from_str(gto_type_str).expect(""),
+            gto_type,
             sha,
             file_name,
             parent: None
