@@ -20,12 +20,12 @@ impl GtoType {
 }
 
 #[derive(Debug)]
-struct GitTreeObject<'a> {
+struct GitTreeObject {
     mode: u32,
     gto_type: GtoType,
     sha: String,
     file_name: String,
-    parent: Option<&'a String>
+    parent: Option<String>
 }
 
 fn git_cat_file(sha: &str) -> Output {
@@ -107,7 +107,7 @@ fn main() {
                     gto_type: GtoType::from_str(gto_type_str).expect(""),
                     sha,
                     file_name,
-                    parent: Some(tree_dir_name)
+                    parent: Some(tree_dir_name.clone())
                 };
 
                 gto_leaves.push(gto_struct);
@@ -116,7 +116,11 @@ fn main() {
             let blob_file_name = &gto_object.file_name;
             let blob_dir_path = format!("{}/{}", pwd.display(), blob_file_name);
             // println!("Created File: ----> {}", blob_dir_path);
-            fs::File::create(blob_dir_path).unwrap();
+            let blob_sha = &gto_object.sha;
+            let blob_content = git_cat_file(blob_sha);
+            fs::write(&blob_dir_path, &blob_content.stdout).unwrap_or_else(|e| {
+                eprintln!("Failed to write file content {} :\n{}", &blob_dir_path, e);
+            });
         } 
     }
 
@@ -124,16 +128,43 @@ fn main() {
         if leave.gto_type == GtoType::Tree {
             let tree_dir_name = &leave.parent.expect("");
             let tree_file_name = &leave.file_name;
-            let tree_dir_path = format!("{}/{}/{}", pwd.display(), tree_dir_name, tree_file_name);
+            let tree_dir_path = format!("{}/{}", tree_dir_name, tree_file_name);
             // println!("Created _Dir: ----> {}", tree_dir_path);
-            fs::create_dir(tree_dir_path).unwrap();
-            gto_leaves.push(leave);
+            fs::create_dir(&tree_dir_path).unwrap_or_else(|e| {
+                eprintln!("Failed to create directory {}: {}", tree_dir_path, e);
+            });
+
+            let tree_dir_sha = &leave.sha;
+            let leave_tree_output = git_cat_file(&tree_dir_sha);
+            let leave_sha_content = String::from_utf8_lossy(&leave_tree_output.stdout);
+            for line in leave_sha_content.lines() {
+                let gto_line: Vec<&str> = line.split_whitespace().collect();
+
+                let mode = gto_line[0].parse::<u32>().unwrap();
+                let gto_type_str = gto_line[1];
+                let sha = gto_line[2].parse::<String>().unwrap();
+                let file_name = gto_line[3].parse::<String>().unwrap();
+
+                let gto_leave_struct = GitTreeObject {
+                    mode,
+                    gto_type: GtoType::from_str(gto_type_str).expect(""),
+                    sha,
+                    file_name,
+                    parent: Some(tree_dir_path.clone())
+                };
+
+                gto_leaves.push(gto_leave_struct);
+            }
         } else {
             let blob_dir_name = &leave.parent.expect("");
             let blob_file_name = &leave.file_name;
-            let blob_dir_path = format!("{}/{}/{}", pwd.display(), blob_dir_name, blob_file_name);
+            let blob_dir_path = format!("{}/{}", blob_dir_name, blob_file_name);
             // println!("Created File: ----> {}", blob_dir_path);
-            fs::File::create(blob_dir_path).unwrap();
+            let blob_sha = &leave.sha;
+            let blob_content = git_cat_file(blob_sha);
+            fs::write(&blob_dir_path, &blob_content.stdout).unwrap_or_else(|e| {
+                eprintln!("Failed to write file content {} :\n{}", &blob_dir_path, e);
+            });
         } 
     }
 
