@@ -150,9 +150,17 @@ fn main() {
                 let sha = gto_line[2].parse::<String>().unwrap();
                 let file_name = gto_line[3].parse::<String>().unwrap();
 
+                let gto_type = match GtoType::from_str(gto_type_str) {
+                    Some(t) => t,
+                    None => {
+                        println!("{}", line);
+                        continue
+                    }
+                };
+
                 let gto_leave_struct = GitTreeObject {
                     mode,
-                    gto_type: GtoType::from_str(gto_type_str).expect(""),
+                    gto_type,
                     sha,
                     file_name,
                     parent: Some(tree_dir_path.clone())
@@ -160,7 +168,7 @@ fn main() {
 
                 gto_leaves.push(gto_leave_struct);
             }
-        } else {
+        } else if leave.gto_type == GtoType::Blob {
             let blob_dir_name = &leave.parent.expect("");
             let blob_file_name = &leave.file_name;
             let blob_dir_path = format!("{}/{}", blob_dir_name, blob_file_name);
@@ -170,7 +178,9 @@ fn main() {
             fs::write(&blob_dir_path, &blob_content.stdout).unwrap_or_else(|e| {
                 eprintln!("Failed to write file content {} :\n{}", &blob_dir_path, e);
             });
-        } 
+        } else {
+            println!("{:?}", leave);
+        }
     }
 
 }
